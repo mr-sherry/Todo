@@ -1,73 +1,109 @@
-import { useCallback, useState } from "react";
-import "./App.css";
-import AddItems from "./comp/AddItems";
+import { useRef, useState } from "react";
+import { TodoProvider } from "./context/TodoContext";
+import { useEffect } from "react";
+import TodoForm from "./components/TodoForm";
+import TodoItem from "./components/TodoItem";
+
 
 function App() {
-  let [items, setItems] = useState([]);
-  let [inputValue, setInputValue] = useState("");
-  let [replaceBtn, setReplaceBtn] = useState(false);
-  let [editId, setEditId] = useState(0);
+  const [todos, setTodos] = useState([]);
+  const isInitialMount = useRef(true);
 
-  let addItem = useCallback(() => {
-    if (inputValue === "") {
-      alert("Please Enter Value");
-    } else {
-      setItems((prevItem) => [
-        ...prevItem,
-        { id: prevItem.length + 1, value: inputValue },
-      ]);
-      setInputValue("");
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("todos"));
+      if (Array.isArray(saved)) {
+        setTodos(saved);
+      }
+    } catch (e) {
+      console.error("Invalid todos in localStorage:", e);
     }
-    console.log("add");
-  }, [inputValue]);
-
-  let removeItem = useCallback((id) => {
-    setItems((prevItem) => prevItem.filter((item) => item.id !== id));
-    console.log("remove");
   }, []);
-
-  let editItem = useCallback((id, oldValue) => {
-    setEditId(id);
-    setReplaceBtn(true);
-    setInputValue(oldValue);
-    let editP = document.getElementById("input");
-    editP.focus();
-    console.log("edit");
-  }, []);
-
-  let saveItem = useCallback(() => {
-    if (inputValue === "") {
-      alert("Please Enter Value");
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
     } else {
-      setItems((allItems) =>
-        allItems.map((item) =>
-          item.id === editId ? { id: editId, value: inputValue } : item
-        )
-      );
-      setReplaceBtn(false);
-      setInputValue("");
+      localStorage.setItem("todos", JSON.stringify(todos));
     }
-    console.log("save");
-  }, [inputValue, editId]);
+  }, [todos]);
+  // useEffect(() => {
+  //   localStorage.setItem("todos", JSON.stringify(todos));
+  //   console.log("setitem", todos);
+  // }, [todos]);
+  // useEffect(() => {
+  //   try {
+  //     const saved = JSON.parse(localStorage.getItem("todos"));
+  //     console.log(saved);
 
-  return (
-    <>
-      <input
-        id="input"
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-      />
+  //     if (Array.isArray(saved)) {
+  //       setTodos(saved);
+  //     }
+  //   } catch (e) {
+  //     console.error("Invalid todos in localStorage:", e);
+  //   }
+  // }, []);
 
-      {replaceBtn ? (
-        <button onClick={saveItem}>Save</button>
-      ) : (
-        <button onClick={addItem}>Add Item</button>
-      )}
 
-      <AddItems itemEdit={editItem} itemRemover={removeItem} items={items} />
-    </>
-  );
+
+  const addTodo = (todo) => {
+    setTodos((prev) => [{ id: Date.now(), todo, completed: false }, ...prev]
+    )
+  }
+
+  const updateTodo = (id, todo) => {
+    setTodos((prev) => prev.map((prevTodo) => prevTodo.id === id ? { ...prevTodo, todo } : prevTodo))
+  }
+
+  const deleteTodo = (id) => {
+    setTodos((prev) => prev.filter((prevTodo) => prevTodo.id !== id))
+  }
+
+  const completeTodo = (id) => {
+    setTodos((prev) => prev.map((prevTodo) => prevTodo.id === id ?
+      { ...prevTodo, completed: !prevTodo.completeTodo } :
+      prevTodo))
+  }
+
+
+
+  // useEffect(() => {
+  //   localStorage.setItem("todos", JSON.stringify(todos))
+  //   console.log(localStorage.setItem("todos", JSON.stringify(todos)), "setitem");
+
+  // }, [todos])
+
+
+
+
+
+  return <>
+    <TodoProvider value={{ addTodo, updateTodo, deleteTodo, completeTodo }}>
+      <div className="app-container">
+        <div className="todo-box">
+          <h1 className="todo-heading">Manage Your Todos</h1>
+          <div className="todo-form-wrapper">
+            <TodoForm />
+
+          </div>
+          <div className="todo-list">
+            Loop and Add TodoItem here
+            {todos.map((todo) =>
+              // todo ? (
+              <div key={todo.id} className="todo-item-wrapper">
+                <TodoItem todo={todo} />
+              </div>
+              // ) : null
+            )
+            }
+          </div>
+        </div>
+      </div>
+    </TodoProvider>
+  </>;
 }
 
 export default App;
+
+
+
